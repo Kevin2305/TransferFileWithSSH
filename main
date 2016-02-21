@@ -20,8 +20,11 @@ def execute_commands(ssh_client, commands):
         err_list = stderr.readlines()
         if len(err_list) > 0:
             print('%s has errors %s' % (commands[i], err_list[0]))
-        for out in stdout.readlines():
-            print(out)
+            return
+        else:
+            return 1
+        # for out in stdout.readlines():
+        #    print(out)
 
 
 def upload_file_via_ssh(ssh_client, lfile, rfile):
@@ -50,14 +53,17 @@ def close_ssh_connection(ssh_client):
 
 
 def main():
-    commands = ['ls -l', 'vmstat 2 2']
+    commands = ['ls /root/.ssh || mkdir /root/.ssh']
     ssh_info = {'host': '192.168.1.101',
                 'ssh_port': 22,
                 'user': 'oracle',
                 'password': 'oracle'}
+    src_file = '/root/.ssh/authentication.keys'
+    dest_file = '/root/.ssh/authentication.keys'
     conn_client = open_ssh_connection(**ssh_info)
     if conn_client:
-        execute_commands(conn_client, commands)
+        if execute_commands(conn_client, commands):
+            upload_file_via_ssh(conn_client, src_file, dest_file)
         close_ssh_connection(conn_client)
 
 
