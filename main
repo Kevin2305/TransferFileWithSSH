@@ -1,0 +1,65 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+import paramiko
+
+
+def open_ssh_connection(user, password, host, ssh_port=22,  ssh_timeout=3):
+    client = paramiko.SSHClient()
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    try:
+        client.connect(host, port=ssh_port, username=user, password=password, timeout=ssh_timeout)
+        return client
+    except Exception as e:
+        print(e)
+        return
+
+
+def execute_commands(ssh_client, commands):
+    for i in range(len(commands)):
+        stdin, stdout, stderr = ssh_client.exec_command(commands[i])
+        err_list = stderr.readlines()
+        if len(err_list) > 0:
+            print('%s has errors %s' % (commands[i], err_list[0]))
+        for out in stdout.readlines():
+            print(out)
+
+
+def upload_file_via_ssh(ssh_client, lfile, rfile):
+    try:
+        '''
+        conn = paramiko.Transport((hostname, port))
+        conn.connect(username=user, password=password)
+        sftp = paramiko.SFTPClient.from_transport(conn)
+        '''
+        sftp = ssh_client.open_sftp()
+        sftp.put(lfile, rfile)
+    except Exception as e:
+        print(e)
+
+
+def download_file_via_ssh(ssh_client, rfile, lfile):
+    try:
+        sftp = ssh_client.open_sftp()
+        sftp.get(rfile, lfile)
+    except Exception as e:
+        print(e)
+
+
+def close_ssh_connection(ssh_client):
+    ssh_client.close()
+
+
+def main():
+    commands = ['ls -l', 'vmstat 2 2']
+    ssh_info = {'host': '192.168.1.101',
+                'ssh_port': 22,
+                'user': 'oracle',
+                'password': 'oracle'}
+    conn_client = open_ssh_connection(**ssh_info)
+    if conn_client:
+        execute_commands(conn_client, commands)
+        close_ssh_connection(conn_client)
+
+
+if __name__ == '__main__':
+    main()
