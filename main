@@ -2,11 +2,13 @@
 # -*- coding: utf-8 -*-
 import paramiko
 
+
 def open_ssh_connection(user, password, host, ssh_port=22,  ssh_timeout=3):
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     try:
         client.connect(host, port=ssh_port, username=user, password=password, timeout=ssh_timeout)
+        print('SSH connected')
         return client
     except Exception as e:
         print(e)
@@ -16,14 +18,12 @@ def open_ssh_connection(user, password, host, ssh_port=22,  ssh_timeout=3):
 def execute_commands(ssh_client, commands):
     for i in range(len(commands)):
         stdin, stdout, stderr = ssh_client.exec_command(commands[i])
-        err_list = stderr.readlines()
-        if len(err_list) > 0:
-            print('%s has errors %s' % (commands[i], err_list[0]))
-            return
-        else:
-            return 1
-        # for out in stdout.readlines():
-        #    print(out)
+    err_list = stderr.readlines()
+    if len(err_list) > 0:
+        print('%s has errors %s' % (commands[i], err_list[0]))
+        return 1
+    else:
+        return 0
 
 
 def upload_file_via_ssh(ssh_client, lfile, rfile):
@@ -35,37 +35,49 @@ def upload_file_via_ssh(ssh_client, lfile, rfile):
         '''
         sftp = ssh_client.open_sftp()
         sftp.put(lfile, rfile)
+        print('Sent file')
+        return 0
     except Exception as e:
         print(e)
+        return 1
 
 
 def download_file_via_ssh(ssh_client, rfile, lfile):
     try:
         sftp = ssh_client.open_sftp()
         sftp.get(rfile, lfile)
+        print('Got file')
+        return 0
     except Exception as e:
         print(e)
+        return 1
 
 
 def close_ssh_connection(ssh_client):
     ssh_client.close()
+    print("SSH closed")
 
 
 def main():
-    commands = ['ls /root/.ssh || mkdir /root/.ssh']
-    ssh_info = {'host': '192.168.1.101',
+    commands = ['ls /root/.ssh || mkdir /root/.ssh', 'ls /root/.ssh']
+    ssh_info101 = {'host': '192.168.1.101',
                 'ssh_port': 22,
-                'user': 'oracle',
-                'password': 'oracle'}
-    src_file = '/root/.ssh/authentication.keys'
-    dest_file = '/root/.ssh/authentication.keys'
-    conn_client = open_ssh_connection(**ssh_info)
-    if conn_client:
-        if execute_commands(conn_client, commands):
-            upload_file_via_ssh(conn_client, src_file, dest_file)
-        close_ssh_connection(conn_client)
+                'user': 'root',
+                'password': '111111'}
+    ssh_info102 = {'host': '192.168.1.102',
+                'ssh_port': 22,
+                'user': 'root',
+                'password': '111111'}
+    conn_client101 = open_ssh_connection(**ssh_info101)
+    conn_client102 = open_ssh_connection(**ssh_info102)
+    if conn_client101 and conn_client102:
+        if not execute_commands(conn_client102, commands):
+            print(conn_client102.get_host_keys().value)
+            if not download_file_via_ssh(conn_client101, '/root/.ssh/key1', 'c:\key2'):
+                if not upload_file_via_ssh(conn_client102, 'c:\key2', '/root/.ssh/key3'):
+                    close_ssh_connection(conn_client101)
+                    close_ssh_connection(conn_client102)
 
 
 if __name__ == '__main__':
     main()
-    ####
