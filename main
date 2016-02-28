@@ -35,7 +35,11 @@ def upload_file_via_ssh(ssh_client, lfile, rfile):
         '''
         sftp = ssh_client.open_sftp()
         sftp.put(lfile, rfile)
+<<<<<<< HEAD
         print('Sent file %s' % lfile)
+=======
+        print('Sent file')
+>>>>>>> origin/master
         return 0
     except Exception as e:
         print(e)
@@ -46,7 +50,11 @@ def download_file_via_ssh(ssh_client, rfile, lfile):
     try:
         sftp = ssh_client.open_sftp()
         sftp.get(rfile, lfile)
+<<<<<<< HEAD
         print('Got file %s' % rfile)
+=======
+        print('Got file')
+>>>>>>> origin/master
         return 0
     except Exception as e:
         print(e)
