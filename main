@@ -1,13 +1,16 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 import paramiko
+import telnetlib
+import logging
+logging.basicConfig(level=logging.DEBUG)
 
 
-def open_ssh_connection(user, password, host, ssh_port=22,  ssh_timeout=3):
+def open_ssh_connection(user, password, host, ssh_port=22):
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     try:
-        client.connect(host, port=ssh_port, username=user, password=password, timeout=ssh_timeout)
+        client.connect(host, port=ssh_port, username=user, password=password)
         print('SSH connected')
         return client
     except Exception as e:
@@ -60,6 +63,20 @@ def close_ssh_connection(ssh_client):
     print("SSH closed")
 
 
+def test_host_connection(host, port=22, timeout=3):
+    # test if the host is able to be connected via port
+    try:
+        test = None
+        test = telnetlib.Telnet(host, port, timeout)
+    except Exception as e:
+        logging.debug('Host Testing Connection %s' % e)
+        return 1
+    finally:
+        if test:
+            test.close()
+    return 0
+
+
 def main():
     commands = ['ls /root/.ssh || mkdir /root/.ssh', 'ls /root/.ssh']
     ssh_info101 = {'host': '192.168.1.101',
@@ -82,4 +99,6 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    #main()
+    if not test_host_connection('10.10.10.10'):
+        print(123)
