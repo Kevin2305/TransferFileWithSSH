@@ -5,4 +5,5 @@ COMMANDS = [
             'ls /root/bbb || mkdir -p /root/bbb',
             'ls /root/bbb'
             ]
-FILEPATH = 'C:\\Users\\admin\\Desktop\\vmhost.csv'
+FILE_PATH = 'file.csv'
+IP_RANGE = '10.10.68.250-10.10.68.255'

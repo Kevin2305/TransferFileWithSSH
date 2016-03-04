@@ -2,12 +2,11 @@
 # -*- coding: utf-8 -*-
 # python 2.7.11
 import paramiko
-import telnetlib
 import logging
 import commfunction
 import Globals
 
-#logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.DEBUG)
 
 
 def open_ssh_connection(user, password, host, ssh_port=22):
@@ -17,8 +16,8 @@ def open_ssh_connection(user, password, host, ssh_port=22):
         client.connect(host, port=ssh_port, username=user, password=password)
         print('SSH connected')
         return client
-    except Exception as e:
-        print(e)
+    except Exception, e:
+        print e
         return
 
 
@@ -27,7 +26,7 @@ def execute_commands(ssh_client, commands):
         stdin, stdout, stderr = ssh_client.exec_command(commands[i])
     err_list = stderr.readlines()
     if len(err_list) > 0:
-        print('%s has errors %s' % (commands[i], err_list[0]))
+        print('command: %s :has errors: %s' % (commands[i], err_list[0]))
         return 1
     else:
         return 0
@@ -67,29 +66,15 @@ def close_ssh_connection(ssh_client):
     print("SSH closed")
 
 
-def test_host_connection(host, port=22, timeout=3):
-    # test if the host is able to be connected via port
-    try:
-        test = None
-        test = telnetlib.Telnet(host, port, timeout)
-    except Exception as e:
-        logging.debug('Host Testing Connection %s' % e)
-        return 1
-    finally:
-        if test:
-            test.close()
-    return 0
-
-
 def get_host_file_content(file_path):
     result = []
     item = {}
     with open(file_path, 'r') as f:
-        titles = commfunction.str2List(f.readline(), ',')
+        titles = commfunction.str2list(f.readline(), ',')
         logging.debug(titles)
         content = f.readline()
         while content:
-            content = commfunction.str2List(content, ',')
+            content = commfunction.str2list(content, ',')
             logging.debug(content)
             if len(titles) == len(content):
                 for i in range(len(titles)):
@@ -99,26 +84,6 @@ def get_host_file_content(file_path):
                 return
             content = f.readline()
         return result
-
-
-def get_all_network_id(start_id, end_id, mask):
-    start_addr = commfunction.str2List(start_id, '.')
-    end_addr = commfunction.str2List(end_id, '.')
-    mask_addr = commfunction.str2List(mask, '.')
-
-    ip_list = [int(start_addr[0]), int(start_addr[1]), int(start_addr[2]), int(start_addr[3])]
-    ip_flag = [0, 0, 0, 0]
-    for i in range(4):
-        if ip_list[i] != (int(start_addr[i]) & int(mask_addr[i])):
-            ip_flag[i] = 1
-
-    a, b, c, d = 0, 1, 2, 3
-    while ip_list[d] < 255 and ip_flag[d] == 1:
-        ip_list[d] = ip_list[d] + 1
-        ip_addr = str(ip_list[a]) + str(ip_list[b]) + str(ip_list[c]) + str(ip_list[d])
-
-
-
 
 
 def main():
@@ -133,4 +98,5 @@ def main():
 
 
 if __name__ == '__main__':
-    print get_host_file_content(Globals.FILEPATH)
+    print commfunction.get_all_network_id(Globals.IP_RANGE)
+    commfunction.telnet_host_connection('10.10.10.10')
