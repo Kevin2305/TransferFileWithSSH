@@ -1,9 +1,14 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+# python 2.7.11
 import paramiko
 import telnetlib
 import logging
-logging.basicConfig(level=logging.DEBUG)
+import commfunction
+import Globals
+
+#logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.WARNING)
 
 
 def open_ssh_connection(user, password, host, ssh_port=22):
@@ -77,28 +82,31 @@ def test_host_connection(host, port=22, timeout=3):
     return 0
 
 
+def get_host_file_content(filepath):
+    result = []
+    with open(filepath, 'r') as f:
+        content = f.readline()
+        content = commfunction.str2List(content, ',')
+        content = f.readline()
+        while content:
+            logging.debug(content)
+            result.append(commfunction.str2List(content, ','))
+            content = f.readline()
+        return result
+
+
 def main():
-    commands = ['ls /root/.ssh || mkdir /root/.ssh', 'ls /root/.ssh']
-    ssh_info101 = {'host': '192.168.1.101',
-                'ssh_port': 22,
-                'user': 'root',
-                'password': '111111'}
-    ssh_info102 = {'host': '192.168.1.102',
-                'ssh_port': 22,
-                'user': 'root',
-                'password': '111111'}
+    commands = ['%s' % Globals.COMMANDS]
+    ssh_info101 = {'host': '10.10.68.213',
+                   'ssh_port': 3389,
+                   'user': 'root',
+                   'password': 'root@123'}
     conn_client101 = open_ssh_connection(**ssh_info101)
-    conn_client102 = open_ssh_connection(**ssh_info102)
-    if conn_client101 and conn_client102:
-        if not execute_commands(conn_client102, commands):
-            print(conn_client102.get_host_keys().value)
-            if not download_file_via_ssh(conn_client101, '/root/.ssh/key1', 'c:\key2'):
-                if not upload_file_via_ssh(conn_client102, 'c:\key2', '/root/.ssh/key3'):
-                    close_ssh_connection(conn_client101)
-                    close_ssh_connection(conn_client102)
+    if conn_client101:
+        if not execute_commands(conn_client101, commands):
+            print(conn_client101.get_host_keys().value)
+            close_ssh_connection(conn_client101)
 
 
 if __name__ == '__main__':
-    #main()
-    if not test_host_connection('10.10.10.10'):
-        print(123)
+    main()
