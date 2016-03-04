@@ -8,7 +8,6 @@ import commfunction
 import Globals
 
 #logging.basicConfig(level=logging.DEBUG)
-logging.basicConfig(level=logging.WARNING)
 
 
 def open_ssh_connection(user, password, host, ssh_port=22):
@@ -82,31 +81,56 @@ def test_host_connection(host, port=22, timeout=3):
     return 0
 
 
-def get_host_file_content(filepath):
+def get_host_file_content(file_path):
     result = []
-    with open(filepath, 'r') as f:
-        content = f.readline()
-        content = commfunction.str2List(content, ',')
+    item = {}
+    with open(file_path, 'r') as f:
+        titles = commfunction.str2List(f.readline(), ',')
+        logging.debug(titles)
         content = f.readline()
         while content:
+            content = commfunction.str2List(content, ',')
             logging.debug(content)
-            result.append(commfunction.str2List(content, ','))
+            if len(titles) == len(content):
+                for i in range(len(titles)):
+                    item[titles[i]] = content[i]
+                result.append(item)
+            else:
+                return
             content = f.readline()
         return result
 
 
+def get_all_network_id(start_id, end_id, mask):
+    start_addr = commfunction.str2List(start_id, '.')
+    end_addr = commfunction.str2List(end_id, '.')
+    mask_addr = commfunction.str2List(mask, '.')
+
+    ip_list = [int(start_addr[0]), int(start_addr[1]), int(start_addr[2]), int(start_addr[3])]
+    ip_flag = [0, 0, 0, 0]
+    for i in range(4):
+        if ip_list[i] != (int(start_addr[i]) & int(mask_addr[i])):
+            ip_flag[i] = 1
+
+    a, b, c, d = 0, 1, 2, 3
+    while ip_list[d] < 255 and ip_flag[d] == 1:
+        ip_list[d] = ip_list[d] + 1
+        ip_addr = str(ip_list[a]) + str(ip_list[b]) + str(ip_list[c]) + str(ip_list[d])
+
+
+
+
+
 def main():
-    commands = ['%s' % Globals.COMMANDS]
     ssh_info101 = {'host': '10.10.68.213',
                    'ssh_port': 3389,
                    'user': 'root',
                    'password': 'root@123'}
     conn_client101 = open_ssh_connection(**ssh_info101)
     if conn_client101:
-        if not execute_commands(conn_client101, commands):
-            print(conn_client101.get_host_keys().value)
+        if not execute_commands(conn_client101, Globals.COMMANDS):
             close_ssh_connection(conn_client101)
 
 
 if __name__ == '__main__':
-    main()
+    print get_host_file_content(Globals.FILEPATH)
