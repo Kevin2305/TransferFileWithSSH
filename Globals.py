@@ -6,4 +6,4 @@ COMMANDS = [
             'ls /root/bbb'
             ]
 FILE_PATH = 'file.csv'
-IP_RANGE = '10.10.68.250-10.10.68.255'
+IP_RANGE = '192.168.1.100-192.168.1.103'

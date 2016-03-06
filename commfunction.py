@@ -44,7 +44,7 @@ def get_all_network_id(ip_range):
     return [num2ip(num) for num in range(start, end+1) if num & 0xff]
 
 
-def telnet_host_connection(host, port=22, timeout=3):
+def test_host_connection(host, port=22, timeout=3):
     # test if the host is able to be connected via port
     try:
         test = None
@@ -57,5 +57,8 @@ def telnet_host_connection(host, port=22, timeout=3):
             test.close()
     return 0
 
+
+
+
 if __name__ == '__main__':
-    print get_all_network_id('10.10.68.250-10.10.68.255')
+    ips = get_all_network_id('10.10.68.250-10.10.68.255')
