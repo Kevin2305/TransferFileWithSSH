@@ -4,6 +4,7 @@
 
 import telnetlib
 import logging
+import paramiko
 
 
 def str2list(s, char=' '):
@@ -51,8 +52,61 @@ def test_host_connection(host, port=22, timeout=3):
         test = telnetlib.Telnet(host, port, timeout)
     except Exception, e:
         logging.warning('Telnetting Host %s on PORT %s Error: %s' % (host, port, e))
-        return 1
+        return
     finally:
         if test:
             test.close()
-    return 0
+    return 1
+
+
+def execute_commands(ssh_client, commands):
+    for i in range(len(commands)):
+        stdin, stdout, stderr = ssh_client.exec_command(commands[i])
+    err_list = stderr.readlines()
+    if len(err_list) > 0:
+        logging.error('command: %s :has errors: %s' % (commands[i], err_list[0]))
+        return
+    else:
+        return 1
+
+
+def upload_file_via_ssh(ssh_client, lfile, rfile):
+    try:
+        sftp = ssh_client.open_sftp()
+        sftp.put(lfile, rfile)
+        logging.info('Sent file %s' % lfile)
+        return 1
+    except Exception, e:
+        logging.error('upload error')
+        logging.error(e)
+        return
+
+
+def download_file_via_ssh(ssh_client, rfile, lfile):
+    try:
+        sftp = ssh_client.open_sftp()
+        sftp.get(rfile, lfile)
+        logging.info('Got file %s' % rfile)
+        return 1
+    except Exception, e:
+        logging.error('download error')
+        logging.error(e)
+        return
+
+
+def open_ssh_connection(host, username, password, ssh_port=22):
+    client = paramiko.SSHClient()
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    try:
+        client.connect(host, port=ssh_port, username=username, password=password)
+        logging.info(host + ' ssh connected')
+        return client
+    except Exception, e:
+        logging.error(host + ' ssh connection error')
+        logging.error(e)
+        return
+
+
+def close_ssh_connection(ssh_client):
+    ssh_client.close()
+    logging.info('SSH closed')
