@@ -50,15 +50,9 @@ def test_host_connection(host, port=22, timeout=3):
         test = None
         test = telnetlib.Telnet(host, port, timeout)
     except Exception, e:
-        logging.debug('Telnetting Host %s on PORT %s Error: %s' % (host, port, e))
+        logging.warning('Telnetting Host %s on PORT %s Error: %s' % (host, port, e))
         return 1
     finally:
         if test:
             test.close()
     return 0
-
-
-
-
-if __name__ == '__main__':
-    ips = get_all_network_id('10.10.68.250-10.10.68.255')

@@ -2,7 +2,8 @@
 # -*- coding: utf-8 -*-
 # python 2.7.11
 import paramiko
-import logging,os
+import logging
+import os
 import commfunction
 import Globals
 from multiprocessing import Process, Queue
@@ -10,8 +11,8 @@ from multiprocessing import Process, Queue
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s %(levelname)s %(message)s',
                     datefmt='%a, %d %b %Y %H:%M:%S',
-                    filename='myapp.log',
-                    filemode='a')
+                    filename='debug_log.log',
+                    filemode='w')
 
 
 def open_ssh_connection(host, username, password, ssh_port=22):
@@ -19,10 +20,11 @@ def open_ssh_connection(host, username, password, ssh_port=22):
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     try:
         client.connect(host, port=ssh_port, username=username, password=password)
-        print 'SSH connected'
+        logging.info(host + ' SSH connected')
         return client
     except Exception, e:
-        print e
+        logging.error(host + ' ssh connection error')
+        logging.error(e)
         return
 
 
@@ -31,7 +33,7 @@ def execute_commands(ssh_client, commands):
         stdin, stdout, stderr = ssh_client.exec_command(commands[i])
     err_list = stderr.readlines()
     if len(err_list) > 0:
-        print 'command: %s :has errors: %s' % (commands[i], err_list[0])
+        logging.error('command: %s :has errors: %s' % (commands[i], err_list[0]))
         return 1
     else:
         return 0
@@ -46,10 +48,11 @@ def upload_file_via_ssh(ssh_client, lfile, rfile):
         '''
         sftp = ssh_client.open_sftp()
         sftp.put(lfile, rfile)
-        print 'Sent file %s' % lfile
+        logging.info('Sent file %s' % lfile)
         return 0
     except Exception, e:
-        print e
+        logging.error('upload error')
+        logging.error(e)
         return 1
 
 
@@ -57,74 +60,74 @@ def download_file_via_ssh(ssh_client, rfile, lfile):
     try:
         sftp = ssh_client.open_sftp()
         sftp.get(rfile, lfile)
-        print 'Got file %s' % rfile
+        logging.info('Got file %s' % rfile)
         return 0
     except Exception, e:
-        print e
+        logging.error('download error')
+        logging.error(e)
         return 1
 
 
 def close_ssh_connection(ssh_client):
     ssh_client.close()
-    print 'SSH closed'
+    logging.info('SSH closed')
 
 
 def get_host_file_content(file_path):
     result = []
-    item = {}
     with open(file_path, 'r') as f:
-        titles = commfunction.str2list(f.readline(), ',')
-        logging.debug(titles)
+        f.readline()
         content = f.readline()
         while content:
             content = commfunction.str2list(content, ',')
-            logging.debug(content)
-            if len(titles) == len(content):
-                for i in range(len(titles)):
-                    item[titles[i]] = content[i]
-                result.append(item)
-            else:
-                return
+            logging.info(content)
+            result.append(content)
             content = f.readline()
         return result
 
 
-def main():
-    ssh_info101 = {'host': '10.10.68.213',
-                   'username': 'root',
-                   'password': 'root@123',
-                   'ssh_port': 3389}
-    conn_client101 = open_ssh_connection(**ssh_info101)
-    if conn_client101:
-        if not execute_commands(conn_client101, Globals.COMMANDS):
-            close_ssh_connection(conn_client101)
+def get_origin_file(src_path, dest_path, kwargs):
+    conn_client = open_ssh_connection(**kwargs)
+    if conn_client:
+        download_file_via_ssh(conn_client, src_path, dest_path)
+        close_ssh_connection(conn_client)
 
 
-def put_available_hosts_into_queue(hosts, queue):
-    for host in hosts:
-        if not commfunction.test_host_connection(host):
-            logging.info('put %s into queue' % host)
-            queue.put(host)
-    logging.info('put END into queue')
-    queue.put('END')
-    logging.info('write queue ended')
+def distribute_file():
+    get_origin_file(Globals.SRC_FILE, Globals.TMP_FILE, Globals.SRC_FILE_HOST)
+    hosts = get_host_file_content(Globals.HOST_FILE)
+    with open('distribute_result.txt', 'w') as f:
+        for x in range(len(hosts)):
+            if not commfunction.test_host_connection(hosts[x][0]):
+                client = open_ssh_connection(hosts[x][0], hosts[x][1], hosts[x][2])
+                if client:
+                    if not execute_commands(client, Globals.COMMANDS):
+                        if not upload_file_via_ssh(client, Globals.TMP_FILE, Globals.DEST_FILE):
+                            f.write(hosts[x][0] + ' OK\n')
+                            close_ssh_connection(client)
+                            continue
+            f.write(hosts[x][0] + ' Failed\n')
+    os.remove(Globals.TMP_FILE)
 
 
-def read_available_hosts_from_queue(queue):
-    while True:
-        content = queue.get()
-        logging.info('get %s from queue' % content)
-        if content == 'END':
-            break
-    logging.info('read queue ended')
+def scan_available_hosts():
+    get_origin_file(Globals.SRC_FILE, Globals.TMP_FILE, Globals.SRC_FILE_HOST)
+    ips = commfunction.get_all_network_id(Globals.IP_RANGE)
+    with open('scan_result.txt', 'w') as f:
+        for ip in ips:
+            if not commfunction.test_host_connection(ip):
+                client = open_ssh_connection(ip, Globals.USERNAME, Globals.PASSWORD)
+                if client:
+                    if not execute_commands(client, Globals.COMMANDS):
+                        if not upload_file_via_ssh(client, Globals.TMP_FILE, Globals.DEST_FILE):
+                            f.write(ip + ' OK\n')
+                            close_ssh_connection(client)
+                            continue
+            f.write(ip + ' Failed\n')
+    os.remove(Globals.TMP_FILE)
 
 
 if __name__ == '__main__':
-    ips = commfunction.get_all_network_id(Globals.IP_RANGE)
-    q = Queue()
-    pw = Process(target=put_available_hosts_into_queue, args=(ips, q))
-    pr = Process(target=read_available_hosts_from_queue, args=(q,))
-    pw.start()
-    pr.start()
-    pw.join()
-    pr.join()
+    #distribute_file()
+    scan_available_hosts()
+
